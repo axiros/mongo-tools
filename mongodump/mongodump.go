@@ -549,6 +549,17 @@ func (dump *MongoDump) DumpIntent(intent *intents.Intent, buffer resettableOutpu
 		findQuery = session.DB(intent.DB).C(intent.C).Find(nil).Hint("_id")
 	}
 
+
+    fields, err := dump.OutputOptions.GetFields()
+    if err != nil {
+        return err;
+    }
+
+    log.Logvf(log.DebugLow, "Going to select this fields: %v", fields)
+    if len(fields) > 0 {
+        findQuery.Select(fields);
+    }
+
 	var dumpCount int64
 
 	if dump.OutputOptions.Out == "-" {

@@ -9,7 +9,10 @@ package mongodump
 import (
 	"github.com/mongodb/mongo-tools/common/connstring"
 	"github.com/mongodb/mongo-tools/common/options"
+    "github.com/mongodb/mongo-tools/common/util"
+    "gopkg.in/mgo.v2/bson"
 
+    "strings"
 	"fmt"
 	"io/ioutil"
 )
@@ -72,9 +75,37 @@ type OutputOptions struct {
 	ExcludedCollectionPrefixes []string `long:"excludeCollectionsWithPrefix" value-name:"<collection-prefix>" description:"exclude all collections from the dump that have the given prefix (may be specified multiple times to exclude additional prefixes)"`
 	NumParallelCollections     int      `long:"numParallelCollections" short:"j" description:"number of collections to dump in parallel (4 by default)" default:"4" default-mask:"-"`
 	ViewsAsCollections         bool     `long:"viewsAsCollections" description:"dump views as normal collections with their produced data, omitting standard collections"`
+    Fields                     string   `long:"fields" description:"Fields to query from mongodb"`
+    FieldsFile                 string   `long:"fieldsFile" value-name:"<filename>" description:"file with field names - 1 per line"`
 }
 
 // Name returns a human-readable group name for output options.
 func (*OutputOptions) Name() string {
 	return "output"
+}
+
+func (outputOptions* OutputOptions) GetFields() (bson.M, error) {
+    selector := bson.M{}
+    if len(outputOptions.Fields) > 0 {
+        for _, field := range strings.Split(outputOptions.Fields, ",") {
+            selector[field] = 1
+        }
+    }
+
+    if len(outputOptions.FieldsFile) > 0 {
+        fields, err := util.GetFieldsFromFile(outputOptions.FieldsFile)
+        if err != nil {
+            return  nil, err
+        }
+
+        for _, field := range fields {
+            selector[field] = 1
+        }
+    }
+
+    if len(selector) > 0 {
+        selector["_id"] = 1
+    }
+
+    return selector, nil
 }
